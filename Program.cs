@@ -5,22 +5,28 @@ using MQTTnet.Formatter;
 using MQTTnet.Protocol;
 using Nett;
 
-namespace ThingsOn_MQTT_Bench {
-    internal class Program {
+namespace ThingsOn_MQTT_Bench
+{
+    internal class Program
+    {
 
         // Entry point of the program
-        private static async Task Main() {
-            
+        private static async Task Main()
+        {
+
             // Prompt the user to start a new benchmark
             Console.Write("Do you want to start a new benchmark? (y/n): ");
             var answer = Console.ReadLine();
 
             // Run the benchmark if the user answers "y"
-            if (answer?.ToLower() == "y") {
-                try {
+            if (answer?.ToLower() == "y")
+            {
+                try
+                {
                     await RunBenchmark();
                 }
-                catch (Exception ex) {
+                catch (Exception ex)
+                {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine($"An error occurred: {ex.Message}");
                     Console.ResetColor();
@@ -28,7 +34,8 @@ namespace ThingsOn_MQTT_Bench {
             }
 
             // Main logic of the benchmark
-            async Task RunBenchmark() {
+            async Task RunBenchmark()
+            {
                 // Load benchmark settings
                 var (settings, serverUri, port, cleanSession, userName, password, keepAlivePeriod, connectionTimeOut,
                     mqttVersion, clientCount, messageCount, messageSize, qos, retain) = LoadSettings();
@@ -49,7 +56,7 @@ namespace ThingsOn_MQTT_Bench {
                     .Select(i => new MqttApplicationMessageBuilder()
                         .WithTopic($"test/{i}")
                         .WithPayload(new byte[messageSize])
-                        .WithQualityOfServiceLevel((MqttQualityOfServiceLevel) qos)
+                        .WithQualityOfServiceLevel((MqttQualityOfServiceLevel)qos)
                         .WithRetainFlag(retain)
                         .Build())
                     .ToList();
@@ -61,9 +68,11 @@ namespace ThingsOn_MQTT_Bench {
                 var totalMessagesSent = clientCount * messageCount;
                 var sent = 0;
                 var progressReport = 0;
-                var sendTasks = clients.Select(client => Task.Run(async () => {
+                var sendTasks = clients.Select(client => Task.Run(async () =>
+                {
                     var results = new List<MqttClientPublishResult>();
-                    foreach (var message in messages) {
+                    foreach (var message in messages)
+                    {
                         // Publish message and store the result
                         var result = await client.PublishAsync(message);
                         results.Add(result);
@@ -71,7 +80,8 @@ namespace ThingsOn_MQTT_Bench {
                         // Update progress
                         sent++;
                         var newProgressReport = sent * 100 / totalMessagesSent;
-                        if (newProgressReport >= progressReport + 10) {
+                        if (newProgressReport >= progressReport + 10)
+                        {
                             progressReport = newProgressReport / 10 * 10;
                             Console.CursorLeft = 0;
                             Console.Write($"\rProgress: {progressReport}%");
@@ -92,7 +102,7 @@ namespace ThingsOn_MQTT_Bench {
                 var elapsed = stopwatch.Elapsed;
                 var messagesSent = clientCount * messageCount;
                 var throughput = messagesSent / elapsed.TotalSeconds;
-                var lossRate = (double) sendResults.SelectMany(r => r).Count(r => r.ReasonCode != MqttClientPublishReasonCode.Success) / messagesSent;
+                var lossRate = (double)sendResults.SelectMany(r => r).Count(r => r.ReasonCode != MqttClientPublishReasonCode.Success) / messagesSent;
                 var successRate = 1.0 - lossRate;
 
                 // Disconnect from MQTT broker and measure disconnect time
@@ -115,10 +125,11 @@ namespace ThingsOn_MQTT_Bench {
                 Console.WriteLine($"{"Loss rate",-20} {lossRate:P0}");
 
                 // Convert data size to appropriate units
-                var dataSize = (double) (totalMessagesSent * settings.Get<int>("MessageSize"));
-                var dataUnits = new[] {"B", "KB", "MB", "GB", "TB"};
+                var dataSize = (double)(totalMessagesSent * settings.Get<int>("MessageSize"));
+                var dataUnits = new[] { "B", "KB", "MB", "GB", "TB" };
                 var dataUnitIndex = 0;
-                while (dataSize >= 1024 && dataUnitIndex < dataUnits.Length - 1) {
+                while (dataSize >= 1024 && dataUnitIndex < dataUnits.Length - 1)
+                {
                     dataSize /= 1024;
                     dataUnitIndex++;
                 }
@@ -132,7 +143,8 @@ namespace ThingsOn_MQTT_Bench {
             }
         }
 
-        private static (TomlTable settings, string serverUri, int port, bool cleanSession, string userName, string password, TimeSpan keepAlivePeriod, TimeSpan connectionTimeOut, MqttProtocolVersion mqttVersion, int clientCount, int messageCount, int messageSize, int qos, bool retain) LoadSettings() {
+        private static (TomlTable settings, string serverUri, int port, bool cleanSession, string userName, string password, TimeSpan keepAlivePeriod, TimeSpan connectionTimeOut, MqttProtocolVersion mqttVersion, int clientCount, int messageCount, int messageSize, int qos, bool retain) LoadSettings()
+        {
             // Load settings from config.toml
             var settings = Toml.ReadFile(Path.Combine(Directory.GetCurrentDirectory(), "config.toml"));
 
@@ -166,11 +178,19 @@ namespace ThingsOn_MQTT_Bench {
         }
 
         // Create MQTT client options from parsed settings
-        private static MqttClientOptions CreateMqttClientOptions(string serverUri, int port, bool cleanSession, string userName, string password, TimeSpan keepAlivePeriod, TimeSpan connectionTimeOut, MqttProtocolVersion mqttVersion) {
+        private static MqttClientOptions CreateMqttClientOptions(string serverUri, int port, bool cleanSession, string userName, string password, TimeSpan keepAlivePeriod, TimeSpan connectionTimeOut, MqttProtocolVersion mqttVersion)
+        {
             var options = new MqttClientOptionsBuilder()
                 .WithClientId(Guid.NewGuid().ToString())
                 .WithTcpServer(serverUri, port)
                 .WithCleanSession(cleanSession)
+                .WithTls(p =>
+{
+    p.CertificateValidationHandler = e =>
+    {
+        return true;
+    };
+})
                 .WithCredentials(userName, password)
                 .WithKeepAlivePeriod(keepAlivePeriod)
                 .WithTimeout(connectionTimeOut)
@@ -180,8 +200,10 @@ namespace ThingsOn_MQTT_Bench {
         }
 
         // Parse MQTT protocol version from a string
-        private static MqttProtocolVersion ParseMqttProtocolVersion(string value) {
-            switch (value.ToLowerInvariant()) {
+        private static MqttProtocolVersion ParseMqttProtocolVersion(string value)
+        {
+            switch (value.ToLowerInvariant())
+            {
                 case "v310":
                     return MqttProtocolVersion.V310;
                 case "v311":
